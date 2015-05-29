@@ -47,12 +47,12 @@ my $forge_id = 36;
 
 if ($datasource_id && $date_to_start)
 {
-	# connect to db (once at local grid6, and once at Syracuse backup server)
+	# connect to db (once at local and once at remote backup server)
 	# dsn takes the format of "DBI:mysql:ossmole_merged:grid6.cs.elon.edu"
-	my $dsn1 = "DBI:mysql:ossmole_merged:grid6.cs.elon.edu";
+	my $dsn1 = "DBI:mysql:ossmole_merged:hostname";
 	my $dbh1 = DBI->connect($dsn1, "username", "password", {RaiseError=>1});
 	
-	my $dsn2 = "DBI:mysql:ossmole_merged:flossdata.syr.edu";
+	my $dsn2 = "DBI:mysql:ossmole_merged:hostname";
 	my $dbh2 = DBI->connect($dsn2, "username", "password", {RaiseError=>1});
 	
 	mkdir ($datasource_id);
