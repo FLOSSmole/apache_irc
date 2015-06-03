@@ -49,10 +49,10 @@ if ($datasource_id)
 	my $dsn1 = "DBI:mysql:ossmole_merged:hostname";
 	my $dbh1 = DBI->connect($dsn1, "username", "password", {RaiseError=>1});
 	
-	my $dsn2 = "DBI:mysql:irc:hostname";
+	my $dsn2 = "DBI:mysql:apache_irc:hostname";
 	my $dbh2 = DBI->connect($dsn2, "username", "password", {RaiseError=>1});
 	
-	my $dsn3 = "DBI:mysql:irc:hostname";
+	my $dsn3 = "DBI:mysql:apache_irc:hostname";
 	my $dbh3 = DBI->connect($dsn3, "username", "password", {RaiseError=>1});
 	
 	# get the file list from the 'comments' field in the datasources table
