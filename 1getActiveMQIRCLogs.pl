@@ -1,9 +1,10 @@
-#!/usr/bin/perl
+# -*- coding: utf-8 -*-
 ## This program is free software; you can redistribute it
 ## and/or modify it under the same terms as Perl itself.
 ## Please see the Perl Artistic License 2.0.
 ## 
-## Copyright (C) 2004-2015 Megan Squire <msquire@elon.edu>
+## Copyright (C) 2004-2016 Megan Squire <msquire@elon.edu>
+## Major Contributions from Evan Ashwell (converted from perl to python)
 ##
 ## We're working on this at http://flossmole.org - Come help us build 
 ## an open and accessible repository for data and analyses for open
@@ -18,23 +19,25 @@
 ##
 ## and
 ##
-## FLOSSmole (2004-2015) FLOSSmole: a project to provide academic access to data 
+## FLOSSmole (2004-2016) FLOSSmole: a project to provide academic access to data 
 ## and analyses of open source projects.  Available at http://flossmole.org 
 #
 ################################################################
 # usage:
-# > perl 1getActiveMQIRCLogs.pl <new_datasource_id> <date-to-start> 
+# > python 1getActiveMQIRCLogs.py <new_datasource_id> <date-to-start> <password>
 #
 # THIS DATASOURCE IS THE NEXT ONE AVAIL IN THE DB - AND IT WILL GET INCREMENTED
+# (one per day)
 # DATE TO START is the oldest un-collected date; 
-# the script will go from there through yesterday in order
+# the script will go from there through yesterday, in order
 # example usage:
-# > perl 1getActiveMQIRCLogs.pl 48039 20140310
+# > python3 1getActiveMQIRCLogs.pl 62568 20150530 password
 #
 # purpose: 
 # grab all the IRC logs from http://irclogs.dankulp.com
-# parse these files looking for facts to populate the aries irc table
+# parse these files looking for facts to populate the django irc table
 ################################################################
+
 import sys
 import pymysql
 import datetime
@@ -46,135 +49,125 @@ except ImportError:
     import urllib2
 import codecs
 
-# --------------------------------------------------
-# get the files from the web site
-# starting with the date given on the command line
-# store each URL as a local file
-# --------------------------------------------------
-def grabFiles(dbh1, dbh2, datasource_id, urlstem, date_to_start):
-    p_dbh1= dbh1
-    p_dbh2= dbh2
-    p_datasource_id = datasource_id
-    p_urlstem= urlstem
-    p_date_to_start = date_to_start
-    cursor= dbh1.cursor()
-    newds = p_datasource_id
-    
-     #get yesterday's date
-    yesterday= datetime.datetime.now()-timedelta(days= 1)
-    print ("yesterday's date is:",yesterday)
-    dates= datetime.datetime(int(p_date_to_start[0:4]),int(p_date_to_start[4:-2]),int(p_date_to_start[6:]))
+datasource_id = str(sys.argv[1])
+dateToStart   = str(sys.argv[2])
+password      = str(sys.argv[3])
+urlStem = "http://irclogs.dankulp.com/logs/irclogger_log/apache-activemq";
+forgeID = 36;
+newDS   = int(datasource_id)
 
-    while(dates <= yesterday):
+if datasource_id and dateToStart:
+    try:
+        db1 = pymysql.connect(host='grid6.cs.elon.edu',
+                                  database='ossmole_merged',
+                                  user='megan',
+                                  password=password,
+                                  use_unicode=True,
+                                  charset='utf8')
+    
+    except pymysql.Error as err:
+        print(err)
+
+    try:
+         db2 = pymysql.connect(host='flossdata.syr.edu',
+                                  database='ossmole_merged',
+                                  user='megan',
+                                  password=password,
+                                  use_unicode=True,
+                                  charset='utf8')
+    except pymysql.Error as err:
+        print(err)
+    
+    cursor1 = db1.cursor()
+    cursor2 = db2.cursor()
+   
+    # make directory and save file
+    os.mkdir(datasource_id)
+
+    # get yesterday's date
+    yesterday = datetime.datetime.now() - timedelta(days = 1)
+    print ("yesterday's date is:",yesterday)
+    dateS = datetime.datetime(int(dateToStart[0:4]),int(dateToStart[4:-2]),int(dateToStart[6:]))
+    
+    while(dateS <= yesterday):
         print("working on ...")
-        print(date)
-        
-        
+        print(dateS)
+
         # get yyyy, mm, dd and put into URL
-                # get yyyy, mm, dd and put into URL
-        yyyy = dates.year
-        mm   = dates.month
-        dd   = dates.day
+        # get yyyy, mm, dd and put into URL
+        yyyy = dateS.year
+        mm   = dateS.month
+        dd   = dateS.day
         
         # put leading zeroes on mm and dd
         if (mm < 10):
             mm = "0" + str(mm)
         if (dd < 10):
             dd = "0" + str(dd)
-        fileName= "/"+str(yyyy)+"-"+str(mm)+ "-"+str(dd)
+        
         
         # get file
         # Log URLs are in this format:
         # http://irclogs.dankulp.com/logs/irclogger_log/apache-activemq?date=2011-11-28&raw=on
-        filestem = "?date=" + str(yyyy) + "-" + str(mm) + "-" + str(dd) + "&raw=on";
-        newURL = p_urlstem + filestem
-        print ("getting URL ",newURL)
-        
-        saveLoc = p_datasource_id + "/" + str(yyyy) + str(mm) + str(dd)
-        print ("...saving as: ", saveLoc)        
+        urlFile = "?date=" + str(yyyy) + "-" + str(mm) + "-" + str(dd) + "&raw=on";
+        fullURL = urlStem + urlFile
+        print ("getting URL", fullURL)
         
         try:
-            html = urllib2.urlopen(newURL).read()
+            html = urllib2.urlopen(fullURL).read()
         except urllib2.HTTPError as error:
             print(error)
         else:
-            fileloc = datasource_id + fileName
-            outfile = codecs.open(fileloc,'w')
+            fileLoc = datasource_id + "/" + str(yyyy) + str(mm) + str(dd)
+            outfile = codecs.open(fileLoc,'w')
             outfile.write(str(html))
-            outfile.close()		   
-
+            outfile.close()	
+        
+        insertQuery="INSERT INTO `datasources`(`datasource_id`,\
+                `forge_id`,\
+                `friendly_name`,\
+                `date_donated`,\
+                `contact_person`,\
+                `comments`,\
+                `start_date`,\
+                `end_date`) VALUES (%s,%s,%s,%s,%s,%s,%s,%s)"
         #======
         # LOCAL
         #======
         try:
-            insertQuery="INSERT INTO `datasources`(`datasource_id`,\
-            `forge_id`,\
-            `friendly_name`,\
-            `date_donated`,\
-            `contact_person`,\
-            `comments`,\
-            `start_date`,\
-            `end_date`) VALUES (%s,%s,%s,%s,%s,%s,%s,%s)"
-            cursor.execute(insertQuery,(newds,forge_id,'ActiveMQ IRC '+ str(yyyy) + str(mm) + str(dd),datetime.datetime.now(),'msquire@elon.edu',saveLoc,datetime.datetime.now(),datetime.datetime.now()))
+            cursor1.execute(insertQuery,(newDS,
+                    forgeID, 
+                    'ActiveMQ IRC '+ str(yyyy) + str(mm) + str(dd),
+                    datetime.datetime.now(),
+                    'msquire@elon.edu',
+                    fileLoc,
+                    datetime.datetime.now(),
+                    datetime.datetime.now()))
         except pymysql.Error as error:
             print(error)
-            dbh1.rollback()
+            db1.rollback()
+        #======
+        # REMOTE
+        #======    
+        try:
+            cursor2.execute(insertQuery,(newDS,
+                    forgeID, 
+                    'ActiveMQ IRC '+ str(yyyy) + str(mm) + str(dd),
+                    datetime.datetime.now(),
+                    'msquire@elon.edu',
+                    fileLoc,
+                    datetime.datetime.now(),
+                    datetime.datetime.now()))
+        except pymysql.Error as error:
+            print(error)
+            db2.rollback()
+            
         #increment date by one
-        dates= dates + timedelta(days=1)
-        newds= int(newds) +1
-"""
-        #=====
-        # SYR
-        #=====
-		my $insertQuery2 = $p_dbh2->prepare(qq{INSERT IGNORE INTO ossmole_merged.datasources
-						(datasource_id,
-						forge_id,
-						friendly_name,
-						date_donated,
-						contact_person,
-						comments,
-						start_date,
-						end_date)
-						VALUES (?,?,?,now(),'msquire\@elon.edu',?,now(),now())});
-	
-		$insertQuery2->execute($newds, $forge_id, 'ActiveMQ IRC '. $yyyy.$mm.$dd, $saveLoc)
-		  or die "Couldn't execute statement on SYR: " . $insertQuery2->errstr;
-		$insertQuery2->finish();
-        
-        
-        #increment date by one
-        date->add(days=>1);
-        $newds++;
-"""
-datasource_id = str(sys.argv[1])
-date_to_start = str(sys.argv[2])
-password= str(sys.argv[3])
-urlstem = "http://irclogs.dankulp.com/logs/irclogger_log/apache-activemq";
-forge_id = 36;
-
-if datasource_id and date_to_start:
-    try:
-        dbh1 = pymysql.connect(host='grid6.cs.elon.edu',
-                                  database='test',
-                                  user='eashwell',
-                                  password=password,
-                                  charset='utf8')
-    
-    except pymysql.Error as err:
-        print(err)
-    try:
-         dbh2 = pymysql.connect(host='flossdata.syr.edu',
-                                  database='rubygems',
-                                  user='megan',
-                                  password=password,
-                                  charset='utf8')
-    except pymysql.Error as err:
-        print(err)
-        dbh2= "remote"
-    
-    os.mkdir (datasource_id)
-    grabFiles(dbh1, dbh2, datasource_id, urlstem, date_to_start)
-    dbh1.close()
+        dateS  = dateS + timedelta(days=1)
+        newDS += 1   
+    cursor1.close()
+    cursor2.close()
+    db1.close()
+    db2.close()
 else:
 	print ("You need both a datasource_id and a date to start on your commandline.")
-	exit;
