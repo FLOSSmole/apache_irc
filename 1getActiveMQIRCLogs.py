@@ -31,11 +31,11 @@
 # DATE TO START is the oldest un-collected date; 
 # the script will go from there through yesterday, in order
 # example usage:
-# > python3 1getActiveMQIRCLogs.pl 62568 20150530 password
+# > python3 1getActiveMQIRCLogs.py 62568 20150530 password
 #
 # purpose: 
 # grab all the IRC logs from http://irclogs.dankulp.com
-# parse these files looking for facts to populate the django irc table
+# parse these files looking for facts to populate the irc table
 ################################################################
 
 import sys
