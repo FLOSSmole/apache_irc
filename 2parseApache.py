@@ -1,91 +1,107 @@
 # -*- coding: utf-8 -*-
 """
-Created on Thu Aug  4 10:45:45 2016
+Created on Thu Aug  4 13:23:22 2016
 
 @author: gbatchelor
 """
 
-import sys
+# -*- coding: utf-8 -*-
+## This program is free software; you can redistribute it
+## and/or modify it under the same terms as Perl itself.
+## Please see the Perl Artistic License 2.0.
+##
+## Copyright (C) 2004-2016 Megan Squire <msquire@elon.edu>
+## Contributions from:
+## Evan Ashwell - converted from perl to python
+##
+## We're working on this at http://flossmole.org - Come help us build
+## an open and accessible repository for data and analyses for open
+## source projects.
+##
+## If you use this code or data for preparing an academic paper please
+## provide a citation to
+##
+## Howison, J., Conklin, M., & Crowston, K. (2006). FLOSSmole:
+## A collaborative repository for FLOSS research data and analyses.
+## International Journal of Information Technology and Web Engineering, 1(3), 17–26.
+##
+## and
+##
+## FLOSSmole (2004-2016) FLOSSmole: a project to provide academic access to data
+## and analyses of open source projects.  Available at http://flossmole.org
+################################################################
+# usage:
+# > python3 2parseActiveMQIRCLogs.py <datasource_id><password>
+#
+# example usage:
+# > python3 2parseActiveMQIRCLogs.py 62204 password
+#
+# purpose:
+# open each IRC log in the directory, parse out the interesting bits
+# save to database table
+#
+# each date = one datasource_id
+# each line is incremented with a number for that date
+################################################################
 import pymysql
-import datetime
-from datetime import date, timedelta
-import os
-try:
-    import urllib.request as urllib2
-except ImportError:
-    import urllib2
+import sys
+import re
 import codecs
+import datetime
+
+
+password      = sys.argv[2]
+ircType       = sys.argv[3]
 
 
 
-dateToStart   = str(sys.argv[2])
-password      = str(sys.argv[3])
-irctype       = sys.argv[4]
+# A long if statement that  changes which database you insert into based on the
+# third argument of the commandline
 
-dateS = datetime.datetime(int(dateToStart[0:4]),int(dateToStart[4:-2]),int(dateToStart[6:]))
-activemqCutOffDate=datetime.datetime(2015,4,28,0,0,0,0)
 
-# a long if statment that changes which irc data is stored based upon the 4th
-# argument of the commnad line 
-
-if irctype == 'activemq':
+if ircType == 'activemq':
     datasource_id = str(sys.argv[1])
     newDS   = int(datasource_id)
     forge_id = '36'
-    if dateS > activemqCutOffDate:
-        urlstem = "http://irclogs.dankulp.com/logs/irclogger_logs/apache-activemq"
-    else:
-        urlstem="http://irclogs.dankulp.com/logs/irclogger_logs/activemq"
-    if not os.path.exists(datasource_id):
-        os.makedirs(datasource_id)
-elif irctype == 'aries':
+    tableName='apache_activemq_irc'
+elif ircType == 'aries':
     datasource_id = str(sys.argv[1])
     newDS   = int(datasource_id)
     forge_id = '38'
-    urlstem = "http://irclogs.dankulp.com/logs/irclogger_logs/apache-aries"
-    if not os.path.exists(datasource_id):
-        os.makedirs(datasource_id)
-elif irctype == 'camel':
+    tableName='apache_aries_irc'
+elif ircType == 'camel':
     datasource_id = str(sys.argv[1])
     newDS   = int(datasource_id)
+    database = 'apache_camel_irc'
     forge_id = '34'
-    urlstem = "http://irclogs.dankulp.com/logs/irclogger_logs/camel"
-    if not os.path.exists(datasource_id):
-        os.makedirs(datasource_id)
-elif irctype == 'cxf':
+    tableName='apache_camel_irc'
+elif ircType == 'cxf':
     datasource_id = str(sys.argv[1])
     newDS   = int(datasource_id)
     forge_id = '37'
-    urlstem = "http://irclogs.dankulp.com/logs/irclogger_logs/cxf"
-    if not os.path.exists(datasource_id):
-        os.makedirs(datasource_id)
-elif irctype == 'kalumet':
+    tableName='apache_cxf_irc'
+elif ircType == 'kalumet':
     datasource_id = str(sys.argv[1])
     newDS   = int(datasource_id)
     forge_id = '39'
-    urlstem = "http://irclogs.dankulp.com/logs/irclogger_logs/kalumet"
-    if not os.path.exists(datasource_id):
-        os.makedirs(datasource_id)
-elif irctype == 'karaf':
+    tableName='apache_kalumet_irc'
+elif ircType == 'karaf':
     datasource_id = str(sys.argv[1])
     newDS   = int(datasource_id)
     forge_id = '40'
-    urlstem = "http://irclogs.dankulp.com/logs/irclogger_logs/karaf"
-    if not os.path.exists(datasource_id):
-        os.makedirs(datasource_id)
-elif irctype == 'servicemix':
+    tableName='apache_karaf_irc'
+elif ircType == 'servicemix':
     datasource_id = str(sys.argv[1])
     newDS   = int(datasource_id)
     forge_id = '41'
-    urlstem = "http://irclogs.dankulp.com/logs/irclogger_logs/servicemix"
-    if not os.path.exists(datasource_id):
-        os.makedirs(datasource_id)
+    tableName='apache_servicemix_irc'
 else:
     print("invalid irc type, must be one of openstack, dev, infra, meeting, meeting-alt, meeting-3, or dns")
 
 
-
-if datasource_id and dateToStart:
+if datasource_id and password:
+	# connect to db (once at local grid6, and once at Syracuse)
+	# dsn takes the format of "DBI:mysql:ossmole_merged:grid6.cs.elon.edu"
     try:
         db1 = pymysql.connect(host='grid6.cs.elon.edu',
                                   database='ossmole_merged',
@@ -98,8 +114,19 @@ if datasource_id and dateToStart:
         print(err)
 
     try:
-         db2 = pymysql.connect(host='flossdata.syr.edu',
-                                  database='ossmole_merged',
+        db2 = pymysql.connect(host='grid6.cs.elon.edu',
+                                  database='apache_irc',
+                                  user='megan',
+                                  password=password,
+                                  use_unicode=True,
+                                  charset='utf8')
+
+    except pymysql.Error as err:
+        print(err)
+
+    try:
+         db3 = pymysql.connect(host='flossdata.syr.edu',
+                                  database='apache_irc',
                                   user='megan',
                                   password=password,
                                   use_unicode=True,
@@ -109,94 +136,130 @@ if datasource_id and dateToStart:
 
     cursor1 = db1.cursor()
     cursor2 = db2.cursor()
+    cursor3 = db3.cursor()
 
-    # make directory and save file
-    os.mkdir(datasource_id)
+    selectQuery="select datasource_id, comments \
+        		from datasources \
+        		where datasource_id >= %s \
+        		and forge_id=%s"
+    cursor1.execute(selectQuery,(datasource_id,forge_id))
+    rows = cursor1.fetchall()
 
-    # get yesterday's date
-    yesterday = datetime.datetime.now() - timedelta(days = 1)
-    print ("yesterday's date is:",yesterday)
-    dateS = datetime.datetime(int(dateToStart[0:4]),int(dateToStart[4:-2]),int(dateToStart[6:]))
+    for row in rows :
+        newDS = int(row[0])
+        fileLoc = row[1]
+        print ("==================\n")
 
-    while(dateS <= yesterday):
-        print("working on ...")
-        print(dateS)
+        # open the file
+        print("working on: ", fileLoc)
+        log  = codecs.open(fileLoc, 'r', encoding='utf-8', errors='ignore')
+        line = log.read()
+        line = line[2:]
+        line = line[:-3]
+        log  = line.split("\\n")
 
-        # get yyyy, mm, dd and put into URL
-        # get yyyy, mm, dd and put into URL
-        yyyy = dateS.year
-        mm   = dateS.month
-        dd   = dateS.day
-
-        # put leading zeroes on mm and dd
-        if (mm < 10):
-            mm = "0" + str(mm)
-        if (dd < 10):
-            dd = "0" + str(dd)
+        # Parse out details
+        linenum = 0
+        for line in log:
+            linenum     += 1
+            send_user    = ""
+            timelog      = ""
+            line_message = ""
+            messageType  = ""
 
 
-        # get file
-        # Log URLs are in this format:
-        # http://irclogs.dankulp.com/logs/irclogger_log/apache-activemq?date=2011-11-28&raw=on
-        urlFile = "?date=" + str(yyyy) + "-" + str(mm) + "-" + str(dd) + "&raw=on";
-        fullURL = urlstem + urlFile
-        print ("getting URL", fullURL)
+            #date is in the filename, in the format:
+            # 48039/20140306
+            datelog =""
+            formatting= re.search("^(.*?)\/(.*?)$",fileLoc)
+            if formatting:
+                tempdate = formatting.group(2)
+                correctForm= re.search("^(\d\d\d\d)(\d\d)(\d\d)",tempdate)
+                if correctForm:
+                    datelog = correctForm.group(1) + "-" + correctForm.group(2) + "-" + correctForm.group(3)
+                    #fileLoc= formatting.group(1)+ "/" + datelog
+                else:
+                    datelog=formatting.group(2)
 
-        try:
-            html = urllib2.urlopen(fullURL).read()
-        except urllib2.HTTPError as error:
-            print(error)
-        else:
-            fileLoc = datasource_id + "/" + str(yyyy) + str(mm) + str(dd)
-            outfile = codecs.open(fileLoc,'w')
-            outfile.write(str(html))
-            outfile.close()
+            # parse out rest of details & insert
+            # 1. get system message vs regular message, parse
+            # 2. insert
+            #
+            # here are the two patterns:
+            # [20:05] <zmhassan> any tips would be gladly appreciated
+            # [16:09] *** jbonofre has quit IRC (Excess Flood)
+            regularMessage= re.search('^\[(.*?)\]\s+\<(.*?)\>\s+(.*?)$',line)
+            systemMessage= re.search('^\[(.*?)\]\s+\*\*\*\s+(.*?)$',line)
+            if regularMessage: #regular message
+                timelog = regularMessage.group(1)
+                send_user = regularMessage.group(2)
+                line_message = regularMessage.group(3)
+                messageType = "message";
+            elif systemMessage: # system message
+                messageType = "system";
+                timelog = systemMessage.group(1)
+                line_message = systemMessage.group(2)
 
-        insertQuery="INSERT INTO `datasources`(`datasource_id`,\
-                `forge_id`,\
-                `friendly_name`,\
-                `date_donated`,\
-                `contact_person`,\
-                `comments`,\
-                `start_date`,\
-                `end_date`) VALUES (%s,%s,%s,%s,%s,%s,%s,%s)"
-        #======
-        # LOCAL
-        #======
-        try:
-            cursor1.execute(insertQuery,(newDS,
-                    forge_id,
-                    'ActiveMQ IRC '+ str(yyyy) + str(mm) + str(dd),
-                    datetime.datetime.now(),
-                    'msquire@elon.edu',
-                    fileLoc,
-                    datetime.datetime.now(),
-                    datetime.datetime.now()))
-        except pymysql.Error as error:
-            print(error)
-            db1.rollback()
-        #======
-        # REMOTE
-        #======
-        try:
-            cursor2.execute(insertQuery,(newDS,
-                    forge_id,
-                    'ActiveMQ IRC '+ str(yyyy) + str(mm) + str(dd),
-                    datetime.datetime.now(),
-                    'msquire@elon.edu',
-                    fileLoc,
-                    datetime.datetime.now(),
-                    datetime.datetime.now()))
-        except pymysql.Error as error:
-            print(error)
-            db2.rollback()
 
-        #increment date by one
-        dateS  = dateS + timedelta(days=1)
-        newDS += 1
+            if ((datasource_id) and (messageType != "")):
+                insertQuery= "INSERT IGNORE INTO"+tableName+"(datasource_id,\
+                              line_num,\
+                              full_line_text,\
+                              line_message,\
+                              date_of_entry,\
+                              time_of_entry,\
+                              type,\
+                              send_user,\
+                              last_updated) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)"
+                currDate = datetime.datetime.now()
+
+
+                #======
+                # LOCAL
+                #======
+                try:
+                    cursor2.execute(insertQuery,
+                                   (newDS,
+                                    linenum,
+                                    line,
+                                    line_message,
+                                    datelog,
+                                    timelog,
+                                    messageType,
+                                    send_user,
+                                    currDate))
+                    db2.commit()
+                except pymysql.Error as error:
+                    print(error)
+                    db2.rollback()
+
+                #======
+                # REMOTE
+                #======
+
+                try:
+                    cursor3.execute(insertQuery,
+                                   (newDS,
+                                    linenum,
+                                    line,
+                                    line_message,
+                                    datelog,
+                                    timelog,
+                                    messageType,
+                                    send_user,
+                                    currDate))
+                    db3.commit()
+                except pymysql.Error as error:
+                    print(error)
+                    db3.rollback()
+
     cursor1.close()
     cursor2.close()
+    cursor3.close()
+
     db1.close()
     db2.close()
+    db3.close()
+
 else:
-	print ("You need both a datasource_id and a date to start on your commandline.")
+	print ("You need both a datasource_id and a password to start on your commandline.")
