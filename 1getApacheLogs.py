@@ -1,10 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Thu Aug  4 10:45:45 2016
-
-@author: gbatchelor
-"""
-
 import sys
 import pymysql
 import datetime
@@ -18,60 +11,67 @@ import codecs
 
 
 
+
 dateToStart   = str(sys.argv[2])
 password      = str(sys.argv[3])
 irctype       = sys.argv[4]
 
+dateS = datetime.datetime(int(dateToStart[0:4]),int(dateToStart[4:-2]),int(dateToStart[6:]))
+activemqCutOffDate=datetime.datetime(2015,4,28,0,0,0,0)
+
 # a long if statment that changes which irc data is stored based upon the 4th
-# argument of the commnad line 
+# argument of the commnad line
 
 if irctype == 'activemq':
     datasource_id = str(sys.argv[1])
     newDS   = int(datasource_id)
     forge_id = '36'
-    urlstem = "http://irclogs.dankulp.com/logs/irclogger_logs/activemq"
+    if dateS > activemqCutOffDate:
+        urlstem = "http://irclogs.dankulp.com/logs/irclogger_log/apache-activemq/"
+    else:
+        urlstem="http://irclogs.dankulp.com/logs/irclogger_log/activemq/"
     if not os.path.exists(datasource_id):
         os.makedirs(datasource_id)
 elif irctype == 'aries':
     datasource_id = str(sys.argv[1])
     newDS   = int(datasource_id)
     forge_id = '38'
-    urlstem = "http://irclogs.dankulp.com/logs/irclogger_logs/apache-aries"
+    urlstem = "http://irclogs.dankulp.com/logs/irclogger_log/apache-aries"
     if not os.path.exists(datasource_id):
         os.makedirs(datasource_id)
 elif irctype == 'camel':
     datasource_id = str(sys.argv[1])
     newDS   = int(datasource_id)
     forge_id = '34'
-    urlstem = "http://irclogs.dankulp.com/logs/irclogger_logs/camel"
+    urlstem = "http://irclogs.dankulp.com/logs/irclogger_log/camel"
     if not os.path.exists(datasource_id):
         os.makedirs(datasource_id)
 elif irctype == 'cxf':
     datasource_id = str(sys.argv[1])
     newDS   = int(datasource_id)
     forge_id = '37'
-    urlstem = "http://irclogs.dankulp.com/logs/irclogger_logs/cxf"
+    urlstem = "http://irclogs.dankulp.com/logs/irclogger_log/cxf"
     if not os.path.exists(datasource_id):
         os.makedirs(datasource_id)
 elif irctype == 'kalumet':
     datasource_id = str(sys.argv[1])
     newDS   = int(datasource_id)
     forge_id = '39'
-    urlstem = "http://irclogs.dankulp.com/logs/irclogger_logs/kalumet"
+    urlstem = "http://irclogs.dankulp.com/logs/irclogger_log/kalumet"
     if not os.path.exists(datasource_id):
         os.makedirs(datasource_id)
 elif irctype == 'karaf':
     datasource_id = str(sys.argv[1])
     newDS   = int(datasource_id)
     forge_id = '40'
-    urlstem = "http://irclogs.dankulp.com/logs/irclogger_logs/karaf"
+    urlstem = "http://irclogs.dankulp.com/logs/irclogger_log/karaf"
     if not os.path.exists(datasource_id):
         os.makedirs(datasource_id)
 elif irctype == 'servicemix':
     datasource_id = str(sys.argv[1])
     newDS   = int(datasource_id)
     forge_id = '41'
-    urlstem = "http://irclogs.dankulp.com/logs/irclogger_logs/servicemix"
+    urlstem = "http://irclogs.dankulp.com/logs/irclogger_log/servicemix"
     if not os.path.exists(datasource_id):
         os.makedirs(datasource_id)
 else:
@@ -115,6 +115,9 @@ if datasource_id and dateToStart:
     while(dateS <= yesterday):
         print("working on ...")
         print(dateS)
+        dateString = str(dateS)
+        trunDateString=dateString[0:10]
+        dayOfTheWeek = datetime.datetime.strptime(trunDateString,'%Y-%m-%d').strftime('%a')
 
         # get yyyy, mm, dd and put into URL
         # get yyyy, mm, dd and put into URL
@@ -132,8 +135,8 @@ if datasource_id and dateToStart:
         # get file
         # Log URLs are in this format:
         # http://irclogs.dankulp.com/logs/irclogger_log/apache-activemq?date=2011-11-28&raw=on
-        urlFile = "?date=" + str(yyyy) + "-" + str(mm) + "-" + str(dd) + "&raw=on";
-        fullURL = urlStem + urlFile
+        urlFile = "?date=" + str(yyyy) + "-" + str(mm) + "-" + str(dd) + "," + dayOfTheWeek + "&raw=on";
+        fullURL = urlstem + urlFile
         print ("getting URL", fullURL)
 
         try:
@@ -159,7 +162,7 @@ if datasource_id and dateToStart:
         #======
         try:
             cursor1.execute(insertQuery,(newDS,
-                    forgeID,
+                    forge_id,
                     'ActiveMQ IRC '+ str(yyyy) + str(mm) + str(dd),
                     datetime.datetime.now(),
                     'msquire@elon.edu',
@@ -174,7 +177,7 @@ if datasource_id and dateToStart:
         #======
         try:
             cursor2.execute(insertQuery,(newDS,
-                    forgeID,
+                    forge_id,
                     'ActiveMQ IRC '+ str(yyyy) + str(mm) + str(dd),
                     datetime.datetime.now(),
                     'msquire@elon.edu',
