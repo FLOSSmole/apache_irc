@@ -8,76 +8,15 @@ try:
 except ImportError:
     import urllib2
 import codecs
+import re
 
-
-
-
+datasource_id = str(sys.argv[1])
 dateToStart   = str(sys.argv[2])
 password      = str(sys.argv[3])
 irctype       = sys.argv[4]
 
-dateS = datetime.datetime(int(dateToStart[0:4]),int(dateToStart[4:-2]),int(dateToStart[6:]))
-activemqCutOffDate=datetime.datetime(2015,4,28,0,0,0,0)
-
-# a long if statment that changes which irc data is stored based upon the 4th
-# argument of the commnad line
-
-if irctype == 'activemq':
-    datasource_id = str(sys.argv[1])
-    newDS   = int(datasource_id)
-    forge_id = '36'
-    if dateS > activemqCutOffDate:
-        urlstem = "http://irclogs.dankulp.com/logs/irclogger_log/apache-activemq/"
-    else:
-        urlstem="http://irclogs.dankulp.com/logs/irclogger_log/activemq/"
-    if not os.path.exists(datasource_id):
-        os.makedirs(datasource_id)
-elif irctype == 'aries':
-    datasource_id = str(sys.argv[1])
-    newDS   = int(datasource_id)
-    forge_id = '38'
-    urlstem = "http://irclogs.dankulp.com/logs/irclogger_log/apache-aries"
-    if not os.path.exists(datasource_id):
-        os.makedirs(datasource_id)
-elif irctype == 'camel':
-    datasource_id = str(sys.argv[1])
-    newDS   = int(datasource_id)
-    forge_id = '34'
-    urlstem = "http://irclogs.dankulp.com/logs/irclogger_log/camel"
-    if not os.path.exists(datasource_id):
-        os.makedirs(datasource_id)
-elif irctype == 'cxf':
-    datasource_id = str(sys.argv[1])
-    newDS   = int(datasource_id)
-    forge_id = '37'
-    urlstem = "http://irclogs.dankulp.com/logs/irclogger_log/cxf"
-    if not os.path.exists(datasource_id):
-        os.makedirs(datasource_id)
-elif irctype == 'kalumet':
-    datasource_id = str(sys.argv[1])
-    newDS   = int(datasource_id)
-    forge_id = '39'
-    urlstem = "http://irclogs.dankulp.com/logs/irclogger_log/kalumet"
-    if not os.path.exists(datasource_id):
-        os.makedirs(datasource_id)
-elif irctype == 'karaf':
-    datasource_id = str(sys.argv[1])
-    newDS   = int(datasource_id)
-    forge_id = '40'
-    urlstem = "http://irclogs.dankulp.com/logs/irclogger_log/karaf"
-    if not os.path.exists(datasource_id):
-        os.makedirs(datasource_id)
-elif irctype == 'servicemix':
-    datasource_id = str(sys.argv[1])
-    newDS   = int(datasource_id)
-    forge_id = '41'
-    urlstem = "http://irclogs.dankulp.com/logs/irclogger_log/servicemix"
-    if not os.path.exists(datasource_id):
-        os.makedirs(datasource_id)
-else:
-    print("invalid irc type, must be one of openstack, dev, infra, meeting, meeting-alt, meeting-3, or dns")
-
-
+dateS = datetime.datetime(int(dateToStart[0:4]), int(dateToStart[4:-2]),
+                          int(dateToStart[6:]))
 
 if datasource_id and dateToStart:
     try:
@@ -107,17 +46,45 @@ if datasource_id and dateToStart:
     # make directory and save file
     os.mkdir(datasource_id)
 
-    # get yesterday's date
-    yesterday = datetime.datetime.now() - timedelta(days = 1)
-    print ("yesterday's date is:",yesterday)
-    dateS = datetime.datetime(int(dateToStart[0:4]),int(dateToStart[4:-2]),int(dateToStart[6:]))
+    # get start date from command line, cutoffdate and urlstem from web
+    dateS = datetime.datetime(int(dateToStart[0:4]), int(dateToStart[4:-2]),
+                              int(dateToStart[6:]))
 
-    while(dateS <= yesterday):
+    newDS = int(datasource_id)
+
+    selectQuery = "SELECT `forge_id`,`forge_home_page`\
+            FROM `forges`\
+            WHERE `forge_long_name` LIKE '%apache "+irctype+"%'"
+
+    cursor1.execute(selectQuery)
+    rows = cursor1.fetchall()
+
+    forge_id = rows[0][0]
+    menuURL = rows[0][1]
+
+    try:
+        longhtml = urllib2.urlopen(menuURL).read()
+    except urllib2.HTTPError as error:
+        print(error)
+
+    html2 = longhtml[0:2000]
+    html2 = bytes.decode(html2)
+
+    menuHTML = re.search('date=(..........)', html2)
+    reUrlStem = re.search("alternate forms: <a href=\\\'(.*?)\?", html2)
+
+    if menuHTML and reUrlStem:
+        menuHTMLGroup = menuHTML.group(1)
+        urlStem = reUrlStem.group(1)
+        urlStem = 'http://irclogs.dankulp.com'+urlStem
+        cutOffDate = datetime.datetime.strptime(str(menuHTMLGroup), '%Y-%m-%d')
+
+    while(dateS <= cutOffDate):
         print("working on ...")
         print(dateS)
         dateString = str(dateS)
-        trunDateString=dateString[0:10]
-        dayOfTheWeek = datetime.datetime.strptime(trunDateString,'%Y-%m-%d').strftime('%a')
+        trunDateString = dateString[0:10]
+        dayOfTheWeek = datetime.datetime.strptime(trunDateString, '%Y-%m-%d').strftime('%a')
 
         # get yyyy, mm, dd and put into URL
         # get yyyy, mm, dd and put into URL
@@ -131,13 +98,13 @@ if datasource_id and dateToStart:
         if (dd < 10):
             dd = "0" + str(dd)
 
-
         # get file
         # Log URLs are in this format:
         # http://irclogs.dankulp.com/logs/irclogger_log/apache-activemq?date=2011-11-28&raw=on
-        urlFile = "?date=" + str(yyyy) + "-" + str(mm) + "-" + str(dd) + "," + dayOfTheWeek + "&raw=on";
-        fullURL = urlstem + urlFile
-        print ("getting URL", fullURL)
+        urlFile = "?date=" + str(yyyy) + "-" + str(mm) + "-" + str(dd) + "," +\
+            dayOfTheWeek + "&raw=on"
+        fullURL = urlStem + urlFile
+        print("getting URL", fullURL)
 
         try:
             html = urllib2.urlopen(fullURL).read()
@@ -145,11 +112,11 @@ if datasource_id and dateToStart:
             print(error)
         else:
             fileLoc = datasource_id + "/" + str(yyyy) + str(mm) + str(dd)
-            outfile = codecs.open(fileLoc,'w')
+            outfile = codecs.open(fileLoc, 'w')
             outfile.write(str(html))
             outfile.close()
 
-        insertQuery="INSERT INTO `datasources`(`datasource_id`,\
+        insertQuery = "INSERT INTO `datasources`(`datasource_id`,\
                 `forge_id`,\
                 `friendly_name`,\
                 `date_donated`,\
@@ -157,43 +124,44 @@ if datasource_id and dateToStart:
                 `comments`,\
                 `start_date`,\
                 `end_date`) VALUES (%s,%s,%s,%s,%s,%s,%s,%s)"
-        #======
+        # ======
         # LOCAL
-        #======
+        # ======
         try:
-            cursor1.execute(insertQuery,(newDS,
-                    forge_id,
-                    'ActiveMQ IRC '+ str(yyyy) + str(mm) + str(dd),
-                    datetime.datetime.now(),
-                    'msquire@elon.edu',
-                    fileLoc,
-                    datetime.datetime.now(),
-                    datetime.datetime.now()))
+            cursor1.execute(insertQuery, (newDS,
+                            forge_id,
+                            'ActiveMQ IRC ' + str(yyyy) + str(mm) + str(dd),
+                            datetime.datetime.now(),
+                            'msquire@elon.edu',
+                            fileLoc,
+                            datetime.datetime.now(),
+                            datetime.datetime.now()))
         except pymysql.Error as error:
             print(error)
             db1.rollback()
-        #======
+        # ======
         # REMOTE
-        #======
+        # ======
         try:
-            cursor2.execute(insertQuery,(newDS,
-                    forge_id,
-                    'ActiveMQ IRC '+ str(yyyy) + str(mm) + str(dd),
-                    datetime.datetime.now(),
-                    'msquire@elon.edu',
-                    fileLoc,
-                    datetime.datetime.now(),
-                    datetime.datetime.now()))
+            cursor2.execute(insertQuery, (newDS,
+                            forge_id,
+                            'ActiveMQ IRC ' + str(yyyy) + str(mm) + str(dd),
+                            datetime.datetime.now(),
+                            'msquire@elon.edu',
+                            fileLoc,
+                            datetime.datetime.now(),
+                            datetime.datetime.now()))
         except pymysql.Error as error:
             print(error)
             db2.rollback()
 
-        #increment date by one
-        dateS  = dateS + timedelta(days=1)
+        # increment date by one
+        dateS = dateS + timedelta(days=1)
         newDS += 1
     cursor1.close()
     cursor2.close()
     db1.close()
     db2.close()
 else:
-	print ("You need both a datasource_id and a date to start on your commandline.")
+	print("You need both a datasource_id and a date to start on your\
+             commandline.")
