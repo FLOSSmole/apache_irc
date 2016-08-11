@@ -49,9 +49,11 @@ import re
 import codecs
 import datetime
 
-
+datasource_id = str(sys.argv[1])
+newDS         = int(datasource_id)
 password      = sys.argv[2]
 ircType       = sys.argv[3]
+forge_id      = sys.argv[4]
 
 
 
@@ -60,40 +62,18 @@ ircType       = sys.argv[3]
 
 
 if ircType == 'activemq':
-    datasource_id = str(sys.argv[1])
-    newDS   = int(datasource_id)
-    forge_id = '36'
     tableName='apache_activemq_irc'
 elif ircType == 'aries':
-    datasource_id = str(sys.argv[1])
-    newDS   = int(datasource_id)
-    forge_id = '38'
     tableName='apache_aries_irc'
 elif ircType == 'camel':
-    datasource_id = str(sys.argv[1])
-    newDS   = int(datasource_id)
-    database = 'apache_camel_irc'
-    forge_id = '34'
     tableName='apache_camel_irc'
 elif ircType == 'cxf':
-    datasource_id = str(sys.argv[1])
-    newDS   = int(datasource_id)
-    forge_id = '37'
     tableName='apache_cxf_irc'
 elif ircType == 'kalumet':
-    datasource_id = str(sys.argv[1])
-    newDS   = int(datasource_id)
-    forge_id = '39'
     tableName='apache_kalumet_irc'
 elif ircType == 'karaf':
-    datasource_id = str(sys.argv[1])
-    newDS   = int(datasource_id)
-    forge_id = '40'
     tableName='apache_karaf_irc'
 elif ircType == 'servicemix':
-    datasource_id = str(sys.argv[1])
-    newDS   = int(datasource_id)
-    forge_id = '41'
     tableName='apache_servicemix_irc'
 else:
     print("invalid irc type, must be one of openstack, dev, infra, meeting, meeting-alt, meeting-3, or dns")
