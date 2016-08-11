@@ -1,3 +1,44 @@
+# -*- coding: utf-8 -*-
+## This program is free software; you can redistribute it
+## and/or modify it under the same terms as Perl itself.
+## Please see the Perl Artistic License 2.0.
+## 
+## Copyright (C) 2004-2016 Megan Squire <msquire@elon.edu>
+## Contributions from:
+## Evan Ashwell - converted from perl to python
+## Greg Batchelor - made code dymanic between multiple irc logs
+##
+## We're working on this at http://flossmole.org - Come help us build 
+## an open and accessible repository for data and analyses for open
+## source projects.
+##
+## If you use this code or data for preparing an academic paper please
+## provide a citation to 
+##
+## Howison, J., Conklin, M., & Crowston, K. (2006). FLOSSmole: 
+## A collaborative repository for FLOSS research data and analyses. 
+## International Journal of Information Technology and Web Engineering, 1(3), 17–26.
+##
+## and
+##
+## FLOSSmole (2004-2016) FLOSSmole: a project to provide academic access to data 
+## and analyses of open source projects.  Available at http://flossmole.org 
+################################################################
+# usage:
+# > python3 1getApacheLogs.py <datasource_id><password> 
+#
+# example usage:
+# > python3 1getApacheLogs.py 62204 password 
+#
+# purpose: 
+# 
+# collect apache irc data from web and put key components inside of a database
+# 
+# each date = one datasource_id
+# each line is incremented with a number for that date
+################################################################
+
+
 import sys
 import pymysql
 import datetime
