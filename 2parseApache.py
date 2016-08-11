@@ -202,7 +202,7 @@ if datasource_id and password:
 
 
             if ((datasource_id) and (messageType != "")):
-                insertQuery= "INSERT IGNORE INTO"+tableName+"(datasource_id,\
+                insertQuery= "INSERT IGNORE INTO "+tableName+"(datasource_id,\
                               line_num,\
                               full_line_text,\
                               line_message,\
