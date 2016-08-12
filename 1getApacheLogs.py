@@ -113,9 +113,11 @@ if datasource_id and dateToStart:
 
     menuHTML = re.search('date=(..........)', html2)
     reUrlStem = re.search("alternate forms: <a href=\\\'(.*?)\?", html2)
+    reFriendlyNameSuffix= re.search('<h1>#(.*?)</h1>',html2)
 
     if menuHTML and reUrlStem:
         menuHTMLGroup = menuHTML.group(1)
+        friendlyNameSuffix=reFriendlyNameSuffix.group(1)
         urlStem = reUrlStem.group(1)
         urlStem = 'http://irclogs.dankulp.com'+urlStem
         cutOffDate = datetime.datetime.strptime(str(menuHTMLGroup), '%Y-%m-%d')
@@ -186,7 +188,7 @@ if datasource_id and dateToStart:
         try:
             cursor2.execute(insertQuery, (newDS,
                             forge_id,
-                            'ActiveMQ IRC ' + str(yyyy) + str(mm) + str(dd),
+                            friendlyNameSuffix+ " " + str(yyyy) + str(mm) + str(dd),
                             datetime.datetime.now(),
                             'msquire@elon.edu',
                             fileLoc,
