@@ -1,0 +1,178 @@
+# import packages
+import pymysql
+import re
+import sys
+import codecs
+from datetime import datetime
+import html
+
+
+# take command line args
+
+datasource_id = str(sys.argv[1])
+password      = str(sys.argv[2])
+
+
+
+# connect to DBs and create cursors
+
+
+if datasource_id and password:
+    try:
+        db1 = pymysql.connect(host='grid6.cs.elon.edu',
+                                  database='test',
+                                  user='gbatchelor',
+                                  password=password,
+                                  use_unicode=True,
+                                  charset='utf8')
+    except pymysql.Error as err:
+        print(err)
+        
+    try:
+        db2 = pymysql.connect(host='grid6.cs.elon.edu',
+                              database='test',
+                              user='gbatchelor',
+                              password=password,
+                              use_unicode=True,
+                              charset='utf8')
+    except pymysql.Error as err:
+        print(err)    
+    cursor1 = db1.cursor()
+    cursor2 = db2.cursor()
+
+# select query that grabs from datasourses
+
+    selectQuery = 'SELECT  `datasource_id` ,  `comments` ,  `forge_id` \
+                    FROM  `datasources1` \
+                    WHERE datasource_id >= %s \
+                    ORDER BY  `datasources1`.`datasource_id` ASC '
+                    
+                    
+    insertQuery= "INSERT IGNORE INTO apache_wilderness_aroura (datasource_id,\
+                  line_num,\
+                  full_line_text,\
+                  line_message,\
+                  date_of_entry,\
+                  time_of_entry,\
+                  type,\
+                  send_user,\
+                  last_updated) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)"
+                    
+    cursor1.execute(selectQuery,(datasource_id))
+    
+    rows = cursor1.fetchall()
+    
+
+
+
+# loop that parses though folder based on select query results 
+    for row in rows:
+        ds = row[0]
+        fileLoc = row[1]
+        
+
+        
+
+# opens fileloc and reads in the raw HTML
+
+        log = codecs.open(fileLoc, 'r', encoding='utf-8', errors='ignore')
+        line=log.read()
+        line= line[2:-1]
+        
+        
+        regularLog = re.search('\<table\>(.*?)\</table\>',line,re.DOTALL)
+        table = regularLog.group(1)
+        
+        
+        
+        trs   = table.split("<tr>")
+        
+        
+        lineNum=1
+        for tr in trs:
+            fullLineText = tr
+        
+            reDate = re.search("\\d\'\>(.*?) (.*?) (\d?\d) (.*?) (.*?)\<\/a\> \&nbsp", str(fullLineText))
+            
+            
+            if reDate:
+                month = reDate.group(2)
+                date = reDate.group(3)
+                timeStamp = reDate.group(4)
+                year = reDate.group(5)
+                
+                weirdStamp = str(month+" "+date+" "+year)                
+                
+                dateOfEntry = datetime.strptime(weirdStamp,'%b %d %Y')
+                timeOfEntry = timeStamp
+                
+                reSendUser = re.search("#......'>(.*?):</font></td><td>" ,str(fullLineText))
+                sendUser = reSendUser.group(1)
+
+            reSystemMessage = re.search('\<i\>(.*?)\<\/i\>',str(fullLineText))
+            
+            if reSystemMessage:
+                messageType = 'system'
+                lineMessage = reSystemMessage.group(1)
+                
+                
+            reLineMessage = re.search("<\/td><td>(.+)\s<\/td><\/tr>",fullLineText)
+
+            if reLineMessage:
+                lineMessage = reLineMessage.group(1)
+                messageType = 'message'
+                       
+            if reLineMessage  or reSystemMessage:    
+                print("---------------------------------------------------------")
+                print("Datasourseid    = "+str(datasource_id))  
+                print("  " ) 
+                print("LineNum         = "+str(lineNum)) 
+                print("  " ) 
+                print("Full line text  = "+fullLineText) 
+                print("  " ) 
+                print("LineMessage     = "+lineMessage)
+                print("  " ) 
+                print("Date of entry   = "+str(dateOfEntry))
+                print("  " ) 
+                print("Time of entry   = "+str(timeOfEntry))
+                print("  " ) 
+                print("Message type    = "+messageType)
+                print("  " ) 
+                print("Senduser        = "+str(sendUser))
+                print("  " ) 
+                print("Last updated    = "+str(datetime.now()))
+                print("--------------------------------------------------------")
+                print("  " )
+                print("  " ) 
+                lineNum =lineNum + 1
+            
+# creates insert query and executes it            
+            if reLineMessage  or reSystemMessage:  
+                currDate = datetime.now()
+            
+                try:
+                    cursor2.execute(insertQuery,
+                                   (datasource_id,
+                                    lineNum,
+                                    fullLineText,
+                                    lineMessage,
+                                    dateOfEntry,
+                                    timeOfEntry,
+                                    messageType,
+                                    sendUser,
+                                    currDate))
+                    db2.commit()
+                except pymysql.Error as error:
+                    print(error)
+                    db2.rollback()
+
+
+# closes db connection
+cursor1.close()
+cursor2.close()
+
+
+db1.close()
+db2.close()
+
+ 
