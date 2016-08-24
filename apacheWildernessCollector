@@ -1,0 +1,136 @@
+# import statements
+import sys
+import datetime
+from datetime import date, timedelta
+import os
+try:
+    import urllib.request as urllib2
+except ImportError:
+    import urllib2
+import pymysql
+import codecs
+import re
+
+# command line args
+datasource_id = str(sys.argv[1])
+newDS         = int(datasource_id) 
+dateToStart   = str(sys.argv[2])
+password      = str(sys.argv[3])
+ircAbbr       = sys.argv[4]
+
+# make start date into datetime object
+dateS = datetime.datetime(int(dateToStart[0:4]), int(dateToStart[4:-2]),
+                          int(dateToStart[6:]))              
+today = datetime.datetime.now()
+
+# db connections
+if datasource_id and dateToStart:
+    try:
+        db1 = pymysql.connect(host='grid6.cs.elon.edu',
+                                  database='test',
+                                  user='gbatchelor',
+                                  password=password,
+                                  use_unicode=True,
+                                  charset='utf8')
+
+    except pymysql.Error as err:
+        print(err)
+
+    try:
+         db2 = pymysql.connect(host='grid6.cs.elon.edu',
+                                  database='test',
+                                  user='gbatchelor',
+                                  password=password,
+                                  use_unicode=True,
+                                  charset='utf8')
+    except pymysql.Error as err:
+        print(err)
+
+    # create cursors
+    cursor1 = db1.cursor()
+    cursor2 = db2.cursor()
+
+    # make directory as datasourse id
+    if not os.path.exists(datasource_id):
+        os.mkdir(datasource_id)
+
+    # create and execute select query (grabs forge_id and forge_home_page) from forges table
+    # also creates insert query
+    selectQuery = "SELECT `forge_id`,`forge_home_page`\
+        FROM `forges`\
+        WHERE `forge_abbr` = '"+ircAbbr+"'"
+
+    insertQuery = "INSERT INTO `datasources`(`datasource_id`,\
+        `forge_id`,\
+        `friendly_name`,\
+        `date_donated`,\
+        `contact_person`,\
+        `comments`,\
+        `start_date`,\
+        `end_date`) VALUES (%s,%s,%s,%s,%s,%s,%s,%s)"
+
+    cursor1.execute(selectQuery)
+    rows = cursor1.fetchall()
+
+    forge_id = rows[0][0]
+    menuURL = rows[0][1]
+
+    reFriendlyName = re.search('f=(.*?)\/', menuURL)
+
+    friendlyName = reFriendlyName.group(1)
+
+    # while loop while start date lessthan cutoffdate
+    while(dateS < today):
+        # gets yyy mm dd ready to put into URL
+        yyyy = dateS.year
+        mm   = dateS.month
+        dd   = dateS.day
+
+        # adds leading 0 if month or year less than 10
+        if (mm < 10):
+            mm = "0" + str(mm)
+        if (dd < 10):
+            dd = "0" + str(dd)
+
+        # uses date to make full url calls appended part urlFile and original part URL stem
+        urlFile = str(yyyy)+"-"+str(mm)+"-"+str(dd)
+        fullURL = menuURL+urlFile
+        print("getting URL", fullURL)
+
+        # opens and writes HTML of irc into named datasourse id + date
+        try:
+            html = urllib2.urlopen(fullURL).read()
+            html2 = bytes.decode(html)
+        except urllib2.HTTPError as error:
+            print(error)
+        else:
+            fileLoc = datasource_id + "/" + str(yyyy) + str(mm) + str(dd)
+            outfile = codecs.open(fileLoc, 'w')
+            outfile.write(str(html2))
+            outfile.close()
+
+        # inserts info into datasourse
+        try:
+            cursor2.execute(insertQuery, (newDS,
+                            forge_id,
+                            friendlyName + "/" + urlFile,
+                            datetime.datetime.now(),
+                            'msquire@elon.edu',
+                            fileLoc,
+                            datetime.datetime.now(),
+                            datetime.datetime.now()))
+        except pymysql.Error as error:
+            print(error)
+            db1.rollback()
+
+# increments date and datasourse
+        dateS = dateS + timedelta(days=1)
+        newDS = newDS+1
+    cursor1.close()
+    cursor2.close()
+    db1.close()
+    db2.close()
+    print("Done !")
+else:
+	print("You need both a datasource_id and a date to start on your\
+             commandline.")
