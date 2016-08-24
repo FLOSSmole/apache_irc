@@ -1,48 +1,48 @@
 # -*- coding: utf-8 -*-
-## This program is free software; you can redistribute it
-## and/or modify it under the same terms as Perl itself.
-## Please see the Perl Artistic License 2.0.
-## 
-## Copyright (C) 2004-2016 Megan Squire <msquire@elon.edu>
-## Contributions from:
-## Evan Ashwell - converted from perl to python
-## Greg Batchelor - made code dymanic between multiple irc logs
-##
-## We're working on this at http://flossmole.org - Come help us build 
-## an open and accessible repository for data and analyses for open
-## source projects.
-##
-## If you use this code or data for preparing an academic paper please
-## provide a citation to 
-##
-## Howison, J., Conklin, M., & Crowston, K. (2006). FLOSSmole: 
-## A collaborative repository for FLOSS research data and analyses. 
-## International Journal of Information Technology and Web Engineering, 1(3), 17–26.
-##
-## and
-##
-## FLOSSmole (2004-2016) FLOSSmole: a project to provide academic access to data 
-## and analyses of open source projects.  Available at http://flossmole.org 
-################################################################
-# usage:
-# > python3 1getApacheLogs.py <datasource_id><password> 
-#
-# example usage:
-# > python3 1getApacheLogs.py 62204 password 
-#
-# purpose: 
-# 
-# collect apache irc data from web and put key components inside of a database
-# 
-# each date = one datasource_id
-# each line is incremented with a number for that date
-################################################################
+"""
+This program is free software; you can redistribute it
+and/or modify it under the GPLv2
 
+Copyright (C) 2004-2016 Megan Squire <msquire@elon.edu>
+Contributions from:
+Evan Ashwell - converted from perl to python
+Greg Batchelor - made code dymanic between multiple irc logs
+
+We're working on this at http://flossmole.org - Come help us build
+an open and accessible repository for data and analyses for open
+source projects.
+
+If you use this code or data for preparing an academic paper please
+provide a citation to
+
+Howison, J., Conklin, M., & Crowston, K. (2006). FLOSSmole:
+A collaborative repository for FLOSS research data and analyses.
+International Journal of Information Technology & Web Engineering, 1(3), 17–26.
+
+and
+
+FLOSSmole (2004-2016) FLOSSmole: a project to provide academic access to data
+and analyses of open source projects.  Available at http://flossmole.org
+################################################################
+usage:
+> python3 1getApacheLogs.py <datasource_id> <password>
+
+example usage:
+> python3 1getApacheLogs.py 62204 password
+
+purpose:
+
+collect apache irc data from web and put key components inside of a database
+
+each date = one datasource_id
+each line is incremented with a number for that date
+################################################################
+"""
 
 import sys
 import pymysql
-import datetime
-from datetime import date, timedelta
+from datetime import datetime
+from datetime import timedelta
 import os
 try:
     import urllib.request as urllib2
@@ -56,28 +56,29 @@ dateToStart   = str(sys.argv[2])
 password      = str(sys.argv[3])
 irctype       = sys.argv[4]
 
-dateS = datetime.datetime(int(dateToStart[0:4]), int(dateToStart[4:-2]),
-                          int(dateToStart[6:]))
+dateS = datetime(int(dateToStart[0:4]),
+                 int(dateToStart[4:-2]),
+                 int(dateToStart[6:]))
 
 if datasource_id and dateToStart:
     try:
         db1 = pymysql.connect(host='grid6.cs.elon.edu',
-                                  database='ossmole_merged',
-                                  user='megan',
-                                  password=password,
-                                  use_unicode=True,
-                                  charset='utf8')
+                              database='ossmole_merged',
+                              user='megan',
+                              password=password,
+                              use_unicode=True,
+                              charset='utf8')
 
     except pymysql.Error as err:
         print(err)
 
     try:
-         db2 = pymysql.connect(host='flossdata.syr.edu',
-                                  database='ossmole_merged',
-                                  user='megan',
-                                  password=password,
-                                  use_unicode=True,
-                                  charset='utf8')
+        db2 = pymysql.connect(host='flossdata.syr.edu',
+                              database='ossmole_merged',
+                              user='megan',
+                              password=password,
+                              use_unicode=True,
+                              charset='utf8')
     except pymysql.Error as err:
         print(err)
 
@@ -88,14 +89,15 @@ if datasource_id and dateToStart:
     os.mkdir(datasource_id)
 
     # get start date from command line, cutoffdate and urlstem from web
-    dateS = datetime.datetime(int(dateToStart[0:4]), int(dateToStart[4:-2]),
-                              int(dateToStart[6:]))
+    dateS = datetime(int(dateToStart[0:4]),
+                     int(dateToStart[4:-2]),
+                     int(dateToStart[6:]))
 
     newDS = int(datasource_id)
 
-    selectQuery = "SELECT `forge_id`,`forge_home_page`\
-            FROM `forges`\
-            WHERE `forge_long_name` LIKE '%apache "+irctype+"%'"
+    selectQuery = "SELECT forge_id,forge_home_page \
+                   FROM forges \
+                   WHERE forge_long_name LIKE %apache " + irctype + "%'"
 
     cursor1.execute(selectQuery)
     rows = cursor1.fetchall()
@@ -113,21 +115,22 @@ if datasource_id and dateToStart:
 
     menuHTML = re.search('date=(..........)', html2)
     reUrlStem = re.search("alternate forms: <a href=\\\'(.*?)\?", html2)
-    reFriendlyNameSuffix= re.search('<h1>#(.*?)</h1>',html2)
+    reFriendlyNameSuffix = re.search('<h1>#(.*?)</h1>', html2)
 
     if menuHTML and reUrlStem:
         menuHTMLGroup = menuHTML.group(1)
-        friendlyNameSuffix=reFriendlyNameSuffix.group(1)
+        friendlyNameSuffix = reFriendlyNameSuffix.group(1)
         urlStem = reUrlStem.group(1)
         urlStem = 'http://irclogs.dankulp.com'+urlStem
-        cutOffDate = datetime.datetime.strptime(str(menuHTMLGroup), '%Y-%m-%d')
+        cutOffDate = datetime.strptime(str(menuHTMLGroup), '%Y-%m-%d')
 
     while(dateS <= cutOffDate):
         print("working on ...")
         print(dateS)
         dateString = str(dateS)
         trunDateString = dateString[0:10]
-        dayOfTheWeek = datetime.datetime.strptime(trunDateString, '%Y-%m-%d').strftime('%a')
+        dayOfTheWeek = datetime.strptime(trunDateString,
+                                         '%Y-%m-%d').strftime('%a')
 
         # get yyyy, mm, dd and put into URL
         # get yyyy, mm, dd and put into URL
@@ -144,8 +147,11 @@ if datasource_id and dateToStart:
         # get file
         # Log URLs are in this format:
         # http://irclogs.dankulp.com/logs/irclogger_log/apache-activemq?date=2011-11-28&raw=on
-        urlFile = "?date=" + str(yyyy) + "-" + str(mm) + "-" + str(dd) + "," +\
-            dayOfTheWeek + "&raw=on"
+        urlFile = "?date=" \
+                  + str(yyyy) + "-" + str(mm) + "-" + str(dd) \
+                  + "," \
+                  + dayOfTheWeek \
+                  + "&raw=on"
         fullURL = urlStem + urlFile
         print("getting URL", fullURL)
 
@@ -159,26 +165,29 @@ if datasource_id and dateToStart:
             outfile.write(str(html))
             outfile.close()
 
-        insertQuery = "INSERT INTO `datasources`(`datasource_id`,\
-                `forge_id`,\
-                `friendly_name`,\
-                `date_donated`,\
-                `contact_person`,\
-                `comments`,\
-                `start_date`,\
-                `end_date`) VALUES (%s,%s,%s,%s,%s,%s,%s,%s)"
+        insertQuery = "INSERT INTO datasources(datasource_id,\
+                forge_id,\
+                friendly_name,\
+                date_donated,\
+                contact_person,\
+                comments,\
+                start_date,\
+                end_date) VALUES (%s,%s,%s,%s,%s,%s,%s,%s)"
         # ======
         # LOCAL
         # ======
         try:
             cursor1.execute(insertQuery, (newDS,
                             forge_id,
-                            'ActiveMQ IRC ' + str(yyyy) + str(mm) + str(dd),
-                            datetime.datetime.now(),
+                            friendlyNameSuffix + " "
+                                               + str(yyyy)
+                                               + str(mm)
+                                               + str(dd),
+                            datetime.now(),
                             'msquire@elon.edu',
                             fileLoc,
-                            datetime.datetime.now(),
-                            datetime.datetime.now()))
+                            datetime.now(),
+                            datetime.now()))
         except pymysql.Error as error:
             print(error)
             db1.rollback()
@@ -188,12 +197,15 @@ if datasource_id and dateToStart:
         try:
             cursor2.execute(insertQuery, (newDS,
                             forge_id,
-                            friendlyNameSuffix+ " " + str(yyyy) + str(mm) + str(dd),
-                            datetime.datetime.now(),
+                            friendlyNameSuffix + " "
+                                               + str(yyyy)
+                                               + str(mm)
+                                               + str(dd),
+                            datetime.now(),
                             'msquire@elon.edu',
                             fileLoc,
-                            datetime.datetime.now(),
-                            datetime.datetime.now()))
+                            datetime.now(),
+                            datetime.now()))
         except pymysql.Error as error:
             print(error)
             db2.rollback()
@@ -206,5 +218,4 @@ if datasource_id and dateToStart:
     db1.close()
     db2.close()
 else:
-	print("You need both a datasource_id and a date to start on your\
-             commandline.")
+    print("You need both a datasource_id and a password to start.")
