@@ -25,13 +25,19 @@ FLOSSmole (2004-2016) FLOSSmole: a project to provide academic access to data
 and analyses of open source projects.  Available at http://flossmole.org
 ################################################################
 usage:
-> python3 1getApacheLogs.py <datasource_id> <password>
+> python3 1getApacheLogs.py <datasource_id> <date> <password> <irctype>
 
 example usage:
-> python3 1getApacheLogs.py 62204 password
+> python3 1getApacheLogs.py  20150530 password KFI2
+
+irctype choices as of August 24, 2016:
+cxi2 (CXF v2)
+mqi2 (ActiveMQ v2)
+KFI2 (Karaf v2)
+SMI (ServiceMix)
+SMI2 (ServiceMix v2)
 
 purpose:
-
 collect apache irc data from web and put key components inside of a database
 
 each date = one datasource_id
@@ -54,7 +60,7 @@ import re
 datasource_id = str(sys.argv[1])
 dateToStart   = str(sys.argv[2])
 password      = str(sys.argv[3])
-irctype       = sys.argv[4]
+irctype       = str(sys.argv[4])
 
 dateS = datetime(int(dateToStart[0:4]),
                  int(dateToStart[4:-2]),
@@ -85,27 +91,25 @@ if datasource_id and dateToStart:
     cursor1 = db1.cursor()
     cursor2 = db2.cursor()
 
-    # make directory and save file
     os.mkdir(datasource_id)
 
-    # get start date from command line, cutoffdate and urlstem from web
     dateS = datetime(int(dateToStart[0:4]),
                      int(dateToStart[4:-2]),
                      int(dateToStart[6:]))
 
     newDS = int(datasource_id)
 
-    selectQuery = "SELECT forge_id,forge_home_page \
+    selectQuery = "SELECT forge_id, forge_home_page \
                    FROM forges \
-                   WHERE forge_long_name LIKE %apache " + irctype + "%'"
-
-    cursor1.execute(selectQuery)
+                   WHERE forge_abbr = %s"
+    cursor1.execute(selectQuery, (irctype,))
     rows = cursor1.fetchall()
 
     forge_id = rows[0][0]
     menuURL = rows[0][1]
 
     try:
+        print("opening menuURL:", menuURL)
         longhtml = urllib2.urlopen(menuURL).read()
     except urllib2.HTTPError as error:
         print(error)
