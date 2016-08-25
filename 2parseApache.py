@@ -119,7 +119,7 @@ if datasource_id and password:
         print("==================\n")
 
         # open the file
-        print("working on: ", fileLoc)
+        print("working on: ", fileLoc, "(", newDS, ")")
         log  = codecs.open(fileLoc, 'r', encoding='utf-8', errors='ignore')
         line = log.read()
         line = line[2:]
