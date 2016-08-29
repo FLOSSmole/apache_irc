@@ -28,13 +28,12 @@ usage:
 > python3 1getApacheLogs.py <datasource_id> <date> <password> <irctype>
 
 example usage:
-> python3 1getApacheLogs.py  20150530 password KFI2
+> python3 1getApacheLogs.py 64949 20150530 password KFI2
 
 irctype choices as of August 24, 2016:
 cxi2 (CXF v2)
 mqi2 (ActiveMQ v2)
 KFI2 (Karaf v2)
-SMI (ServiceMix)
 SMI2 (ServiceMix v2)
 
 purpose:
