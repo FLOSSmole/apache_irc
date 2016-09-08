@@ -1,3 +1,22 @@
+"""
+HOW TO USE
+
+argumetns to pass seperated by one space:
+
+datasource id
+date to start  (nospaces in yyyymmdd)
+password
+irc abbreviation 
+
+possible irc abbrevideations
+
+
+
+
+
+"""
+
+
 # import statements
 import sys
 import datetime
