@@ -1,3 +1,19 @@
+"""
+ABOUT ME
+
+THIS PROGRAM PARSES IRC GATHERED BY APACHE WILDRENESS COLLECTOR
+
+ARGUMENTS TO PASS SEPERATED BY A SPACE:
+
+datasource_id
+password
+insert DB
+
+"""
+
+
+
+
 # import packages
 import pymysql
 import re
