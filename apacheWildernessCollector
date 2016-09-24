@@ -1,6 +1,9 @@
 """
 HOW TO USE
 
+THIS PROGRAM COLLECTS IRC DATA FROM MULTIPLE PROJECTS UNDER THE APACHE WILDERNESS UMBRELLA
+SEE: http://wilderness.apache.org/channels/
+
 argumetns to pass seperated by one space:
 
 datasource id
@@ -8,10 +11,23 @@ date to start  (nospaces in yyyymmdd)
 password
 irc abbreviation 
 
-possible irc abbrevideations
+POSSIBLE VALUES FOR irc abbreviation:
 
 
 
+ATRFI   Apache Wilderness IRC Traffic-Server
+
+ATAVI Apache Wilderness IRC Taverna
+
+AMYRI  Apache Wilderness IRC Myraid
+
+AMSOI  Apache Wilderness IRC Mesos-Oversubscription
+
+AMESI    Apache Wilderness IRC Mesos
+
+AAURI    Apache Wilderness IRC Aurora
+
+ASYNI   Apache Wilderness IRC Apache-Syncope
 
 
 """
